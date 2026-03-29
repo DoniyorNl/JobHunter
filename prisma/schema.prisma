@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── USER ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs       Job[]
+  resumes    Resume[]
+  contacts   Contact[]
+  interviews Interview[]
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+// ─── JOB ─────────────────────────────────────────────────────────────────────
+
+model Job {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  company     String
+  location    String?
+  salary      String?
+  url         String?
+  description String?   @db.Text
+  notes       String?   @db.Text
+
+  status      JobStatus @default(WISHLIST)
+  position    Int       @default(0)
+  color       String?
+
+  appliedAt   DateTime?
+  deadlineAt  DateTime?
+
+  keywords    String[]
+  contacts    Contact[]
+  interviews  Interview[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+enum JobStatus {
+  WISHLIST
+  APPLIED
+  PHONE_SCREEN
+  INTERVIEW
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
+
+// ─── RESUME ──────────────────────────────────────────────────────────────────
+
+model Resume {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title      String
+  targetRole String?
+  template   String   @default("modern")
+  isDefault  Boolean  @default(false)
+
+  data       Json
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tailoredVersions TailoredResume[]
+
+  @@index([userId])
+}
+
+model TailoredResume {
+  id         String  @id @default(cuid())
+  resumeId   String
+  resume     Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobId      String?
+
+  jobTitle   String
+  company    String
+  jobDesc    String  @db.Text
+  matchScore Int?
+
+  data       Json
+
+  createdAt  DateTime @default(now())
+
+  @@index([resumeId])
+}
+
+// ─── CONTACT ─────────────────────────────────────────────────────────────────
+
+model Contact {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId    String?
+  job      Job?     @relation(fields: [jobId], references: [id])
+
+  name     String
+  title    String?
+  company  String?
+  email    String?
+  phone    String?
+  linkedin String?
+  twitter  String?
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ─── INTERVIEW ────────────────────────────────────────────────────────────────
+
+model Interview {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  jobId       String
+  job         Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  type        InterviewType
+  scheduledAt DateTime
+  duration    Int?
+  location    String?
+  notes       String?       @db.Text
+  feedback    String?       @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([jobId])
+}
+
+enum InterviewType {
+  PHONE_SCREEN
+  TECHNICAL
+  BEHAVIORAL
+  SYSTEM_DESIGN
+  TAKE_HOME
+  FINAL
+  OFFER_CALL
+}
