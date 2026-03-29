@@ -23,23 +23,31 @@ interface JobCardProps {
 }
 
 function CompanyLogo({ company }: { company: string }) {
+	// Strip non-alphanumeric chars and guess a .com domain for the favicon lookup.
+	// Google's favicon CDN is more reliable than Clearbit (no auth, no rate-limits).
 	const domain = company
 		.toLowerCase()
 		.replace(/[^a-z0-9]/g, '')
 		.concat('.com')
 
+	const fallbackInitials = company.slice(0, 2).toUpperCase()
+
 	return (
-		// eslint-disable-next-line @next/next/no-img-element
-		<img
-			src={`https://logo.clearbit.com/${domain}`}
-			alt={`${company} logo`}
-			className='w-8 h-8 rounded-md object-contain bg-white border'
-			onError={e => {
-				const target = e.currentTarget
-				target.style.display = 'none'
-				target.nextElementSibling?.classList.remove('hidden')
-			}}
-		/>
+		<>
+			{/* eslint-disable-next-line @next/next/no-img-element */}
+			<img
+				src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+				alt={`${company} logo`}
+				className='w-8 h-8 rounded-md object-contain bg-white border p-0.5'
+				onError={e => {
+					e.currentTarget.style.display = 'none'
+					e.currentTarget.nextElementSibling?.classList.remove('hidden')
+				}}
+			/>
+			<div className='w-8 h-8 rounded-md bg-primary/10 items-center justify-center text-xs font-bold text-primary hidden shrink-0'>
+				{fallbackInitials}
+			</div>
+		</>
 	)
 }
 
@@ -75,9 +83,6 @@ export function JobCard({ job }: JobCardProps) {
 			<div className='flex items-start justify-between gap-2 mb-2'>
 				<div className='flex items-center gap-2 min-w-0'>
 					<CompanyLogo company={job.company} />
-					<div className='w-8 h-8 rounded-md bg-muted items-center justify-center text-xs font-bold uppercase hidden'>
-						{job.company.slice(0, 2)}
-					</div>
 					<div className='min-w-0'>
 						<p className='text-sm font-semibold text-foreground truncate leading-tight'>
 							{job.title}

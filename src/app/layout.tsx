@@ -13,8 +13,19 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-	title: 'JobHunter — Job search tracker',
-	description: 'Kanban job board, resumes, and interview tracking (Huntr-style clone).',
+	title: {
+		default: 'JobHunter — Track your job search',
+		template: '%s | JobHunter',
+	},
+	description: 'A Huntr-style job search tracker. Kanban board, resume builder, contact & interview management — all in one place.',
+	keywords: ['job search', 'job tracker', 'kanban', 'resume builder', 'interview tracker'],
+	openGraph: {
+		type: 'website',
+		siteName: 'JobHunter',
+		title: 'JobHunter — Track your job search',
+		description: 'Kanban board, resume builder, contact & interview management.',
+	},
+	robots: { index: false, follow: false }, // private app — no indexing
 }
 
 export default function RootLayout({

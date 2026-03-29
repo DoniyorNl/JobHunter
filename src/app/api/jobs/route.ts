@@ -53,14 +53,18 @@ export async function POST(req: Request) {
 		_max: { position: true },
 	})
 
-	const job = await prisma.job.create({
-		data: {
-			...rest,
-			url: url || null,
-			userId: user.id,
-			position: (maxPosition._max.position ?? -1) + 1,
-		},
-	})
-
-	return Response.json(successResponse(job), { status: 201 })
+	try {
+		const job = await prisma.job.create({
+			data: {
+				...rest,
+				url: url || null,
+				userId: user.id,
+				position: (maxPosition._max.position ?? -1) + 1,
+			},
+		})
+		return Response.json(successResponse(job), { status: 201 })
+	} catch (err) {
+		console.error('[POST /api/jobs]', err)
+		return errorResponse('Failed to create job', 500)
+	}
 }

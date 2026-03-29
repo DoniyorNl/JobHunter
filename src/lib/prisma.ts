@@ -12,7 +12,13 @@ function createClient(): PrismaClient {
 	if (!connectionString) {
 		throw new Error('DATABASE_URL is not set')
 	}
-	const adapter = new PrismaPg({ connectionString })
+	// Supabase Supavisor (pooler) uses a self-signed certificate chain.
+	// rejectUnauthorized: false allows connecting without verifying the cert —
+	// the connection is still encrypted; we simply skip chain validation.
+	const adapter = new PrismaPg({
+		connectionString,
+		ssl: { rejectUnauthorized: false },
+	})
 	return new PrismaClient({
 		adapter,
 		log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],

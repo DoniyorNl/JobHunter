@@ -3,7 +3,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { createClient } from '@/lib/supabase/client'
+import { useUIStore } from '@/stores/uiStore'
 import { cn } from '@/lib/utils'
 import {
 	BarChart2,
@@ -34,22 +36,17 @@ interface SidebarProps {
 	}
 }
 
-export function Sidebar({ user }: SidebarProps) {
+// ─── Shared nav content ────────────────────────────────────────────────────────
+
+function NavContent({
+	user,
+	onNavigate,
+}: {
+	user: SidebarProps['user']
+	onNavigate?: () => void
+}) {
 	const pathname = usePathname()
 	const router = useRouter()
-
-	async function handleLogout() {
-		const supabase = createClient()
-		const { error } = await supabase.auth.signOut()
-
-		if (error) {
-			toast.error('Failed to sign out')
-			return
-		}
-
-		router.push('/login')
-		router.refresh()
-	}
 
 	const initials = user.name
 		? user.name
@@ -60,10 +57,21 @@ export function Sidebar({ user }: SidebarProps) {
 				.slice(0, 2)
 		: (user.email?.[0]?.toUpperCase() ?? 'U')
 
+	async function handleLogout() {
+		const supabase = createClient()
+		const { error } = await supabase.auth.signOut()
+		if (error) {
+			toast.error('Failed to sign out')
+			return
+		}
+		router.push('/login')
+		router.refresh()
+	}
+
 	return (
-		<aside className='w-60 shrink-0 flex flex-col h-full border-r bg-sidebar'>
+		<>
 			{/* Logo */}
-			<div className='flex items-center gap-2.5 px-4 h-14 border-b'>
+			<div className='flex items-center gap-2.5 px-4 h-14 border-b shrink-0'>
 				<div className='w-7 h-7 bg-primary rounded-md flex items-center justify-center shrink-0'>
 					<Briefcase className='w-4 h-4 text-primary-foreground' />
 				</div>
@@ -79,6 +87,7 @@ export function Sidebar({ user }: SidebarProps) {
 						<Link
 							key={href}
 							href={href}
+							onClick={onNavigate}
 							className={cn(
 								'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
 								isActive
@@ -96,7 +105,7 @@ export function Sidebar({ user }: SidebarProps) {
 			<Separator />
 
 			{/* User info & logout */}
-			<div className='p-3'>
+			<div className='p-3 shrink-0'>
 				<div className='flex items-center gap-3 px-2 py-2 rounded-md'>
 					<Avatar className='w-8 h-8 shrink-0'>
 						<AvatarImage src={user.avatarUrl ?? undefined} />
@@ -118,6 +127,44 @@ export function Sidebar({ user }: SidebarProps) {
 					Sign out
 				</Button>
 			</div>
-		</aside>
+		</>
+	)
+}
+
+// ─── Main Sidebar component ────────────────────────────────────────────────────
+
+/**
+ * Renders two variants:
+ * 1. Desktop (lg+): fixed aside always visible
+ * 2. Mobile (<lg): Sheet (drawer) controlled by useUIStore
+ *
+ * Nav content is extracted to NavContent to avoid duplication.
+ */
+export function Sidebar({ user }: SidebarProps) {
+	const sidebarOpen = useUIStore(s => s.sidebarOpen)
+	const setSidebarOpen = useUIStore(s => s.setSidebarOpen)
+
+	return (
+		<>
+			{/* Desktop sidebar — hidden on mobile */}
+			<aside className='hidden lg:flex flex-col w-60 shrink-0 h-full border-r bg-sidebar'>
+				<NavContent user={user} />
+			</aside>
+
+			{/*
+			 * Mobile sidebar — Sheet (drawer from left).
+			 * Only rendered/interactive on small screens.
+			 * Closing on nav click: onNavigate → setSidebarOpen(false)
+			 */}
+			<Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+				<SheetContent
+					side='left'
+					showCloseButton={false}
+					className='w-60 p-0 flex flex-col gap-0'
+				>
+					<NavContent user={user} onNavigate={() => setSidebarOpen(false)} />
+				</SheetContent>
+			</Sheet>
+		</>
 	)
 }

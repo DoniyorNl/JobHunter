@@ -88,22 +88,42 @@ export function useCreateJob() {
 export function useUpdateJob() {
 	const queryClient = useQueryClient()
 	const updateJobStore = useBoardStore(s => s.updateJob)
+	const setJobsStore = useBoardStore(s => s.setJobs)
 
 	return useMutation({
 		mutationFn: ({ id, input }: { id: string; input: UpdateJobInput }) => updateJob(id, input),
+
 		onMutate: async ({ id, input }) => {
-			// Optimistic update
+			// 1. Cancel any outgoing refetches so they don't overwrite our optimistic update
+			await queryClient.cancelQueries({ queryKey: JOB_KEYS.lists() })
+
+			// 2. Snapshot the current query cache (for rollback)
+			const previousJobs = queryClient.getQueryData<Job[]>(JOB_KEYS.lists())
+
+			// 3. Apply optimistic update to the store immediately
 			updateJobStore(id, input as Partial<Job>)
+
+			// 4. Return snapshot — available in onError as context.previousJobs
+			return { previousJobs }
 		},
-		onSuccess: updatedJob => {
+
+		onSuccess: (updatedJob, { id }) => {
+			// Replace the optimistic version with the server's response
 			queryClient.setQueryData<Job[]>(
 				JOB_KEYS.lists(),
-				old => old?.map(j => (j.id === updatedJob.id ? updatedJob : j)) ?? [],
+				old => old?.map(j => (j.id === id ? updatedJob : j)) ?? [],
 			)
+			// Sync store with authoritative server data
+			updateJobStore(id, updatedJob)
 		},
-		onError: (err: Error) => {
+
+		onError: (err: Error, _vars, context) => {
+			// Roll back the store to the snapshot taken in onMutate
+			if (context?.previousJobs) {
+				setJobsStore(context.previousJobs)
+				queryClient.setQueryData(JOB_KEYS.lists(), context.previousJobs)
+			}
 			toast.error(err.message)
-			queryClient.invalidateQueries({ queryKey: JOB_KEYS.lists() })
 		},
 	})
 }
@@ -111,19 +131,37 @@ export function useUpdateJob() {
 export function useDeleteJob() {
 	const queryClient = useQueryClient()
 	const removeJob = useBoardStore(s => s.removeJob)
+	const setJobsStore = useBoardStore(s => s.setJobs)
 
 	return useMutation({
 		mutationFn: deleteJob,
+
 		onMutate: async id => {
-			removeJob(id) // Optimistic
+			await queryClient.cancelQueries({ queryKey: JOB_KEYS.lists() })
+
+			// Snapshot for rollback
+			const previousJobs = queryClient.getQueryData<Job[]>(JOB_KEYS.lists())
+
+			// Optimistically remove from store and cache
+			removeJob(id)
+			queryClient.setQueryData<Job[]>(JOB_KEYS.lists(), old => old?.filter(j => j.id !== id))
+
+			return { previousJobs }
 		},
+
 		onSuccess: () => {
+			// Invalidate to get fresh count from server
 			queryClient.invalidateQueries({ queryKey: JOB_KEYS.lists() })
 			toast.success('Job removed')
 		},
-		onError: (err: Error) => {
+
+		onError: (err: Error, _id, context) => {
+			// Roll back — the card reappears on the board
+			if (context?.previousJobs) {
+				setJobsStore(context.previousJobs)
+				queryClient.setQueryData(JOB_KEYS.lists(), context.previousJobs)
+			}
 			toast.error(err.message)
-			queryClient.invalidateQueries({ queryKey: JOB_KEYS.lists() })
 		},
 	})
 }

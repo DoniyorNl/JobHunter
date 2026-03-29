@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useJobs, useUpdateJob } from '@/hooks/useJobs'
 import { useBoardStore } from '@/stores/boardStore'
@@ -16,10 +17,12 @@ import {
 	useSensor,
 	useSensors,
 } from '@dnd-kit/core'
+import { Briefcase, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { AddJobModal } from './AddJobModal'
 import { BoardColumn } from './BoardColumn'
 import { JobCard } from './JobCard'
+import { JobDetailPanel } from './JobDetailPanel'
 
 export function BoardView() {
 	const { jobs, moveJob } = useBoardStore()
@@ -95,6 +98,20 @@ export function BoardView() {
 		return <BoardSkeleton />
 	}
 
+	// First-time user: show a friendly empty state instead of 6 empty columns
+	if (jobs.length === 0) {
+		return (
+			<>
+				<BoardEmptyState onAddJob={() => setIsAddModalOpen(true)} />
+				<AddJobModal
+					open={isAddModalOpen}
+					onOpenChange={setIsAddModalOpen}
+					defaultStatus='WISHLIST'
+				/>
+			</>
+		)
+	}
+
 	return (
 		<>
 			<DndContext
@@ -124,12 +141,36 @@ export function BoardView() {
 				</DragOverlay>
 			</DndContext>
 
-			<AddJobModal
-				open={isAddModalOpen}
-				onOpenChange={setIsAddModalOpen}
-				defaultStatus={defaultAddStatus}
-			/>
-		</>
+		<AddJobModal
+			open={isAddModalOpen}
+			onOpenChange={setIsAddModalOpen}
+			defaultStatus={defaultAddStatus}
+		/>
+
+		{/* Job detail side panel — rendered once, visibility driven by Zustand store */}
+		<JobDetailPanel />
+	</>
+	)
+}
+
+function BoardEmptyState({ onAddJob }: { onAddJob: () => void }) {
+	return (
+		<div className='flex flex-col items-center justify-center h-full gap-4 px-4 text-center'>
+			<div className='w-16 h-16 rounded-2xl bg-muted flex items-center justify-center'>
+				<Briefcase className='w-8 h-8 text-muted-foreground' />
+			</div>
+			<div className='space-y-1'>
+				<h3 className='text-base font-semibold text-foreground'>Your board is empty</h3>
+				<p className='text-sm text-muted-foreground max-w-xs'>
+					Add your first job to start tracking applications. Drag cards between columns as your
+					status changes.
+				</p>
+			</div>
+			<Button onClick={onAddJob} className='gap-2'>
+				<Plus className='w-4 h-4' />
+				Add your first job
+			</Button>
+		</div>
 	)
 }
 
