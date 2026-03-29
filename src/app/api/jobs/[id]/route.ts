@@ -1,5 +1,5 @@
+import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createClient } from '@/lib/supabase/server'
 import { errorResponse, successResponse } from '@/types/api'
 import { z } from 'zod'
 
@@ -21,50 +21,42 @@ const updateJobSchema = z.object({
 	keywords: z.array(z.string()).optional(),
 })
 
-async function getAuthenticatedUser() {
-	const supabase = await createClient()
-	const {
-		data: { user },
-	} = await supabase.auth.getUser()
-	return user
-}
-
-async function getJobOrFail(jobId: string, userId: string) {
-	const job = await prisma.job.findFirst({
-		where: { id: jobId, userId },
-	})
-	return job
+/**
+ * Fetch the job and verify it belongs to this user in one query.
+ * Using findFirst with both id + userId is safer than findUnique(id) + manual check —
+ * it prevents any timing-window where another user could access the record.
+ */
+async function getOwnedJob(jobId: string, userId: string) {
+	return prisma.job.findFirst({ where: { id: jobId, userId } })
 }
 
 /**
- * GET /api/jobs/[id] — get a single job
+ * GET /api/jobs/[id]
  */
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-	const user = await getAuthenticatedUser()
-	if (!user) return errorResponse('Unauthorized', 401)
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { user, response } = await requireUser()
+	if (response) return response
 
 	const { id } = await params
-	const job = await getJobOrFail(id, user.id)
-
+	const job = await getOwnedJob(id, user.id)
 	if (!job) return errorResponse('Job not found', 404)
 
 	return Response.json(successResponse(job))
 }
 
 /**
- * PATCH /api/jobs/[id] — update a job
+ * PATCH /api/jobs/[id] — partial update
  */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-	const user = await getAuthenticatedUser()
-	if (!user) return errorResponse('Unauthorized', 401)
+	const { user, response } = await requireUser()
+	if (response) return response
 
 	const { id } = await params
-	const existing = await getJobOrFail(id, user.id)
+	const existing = await getOwnedJob(id, user.id)
 	if (!existing) return errorResponse('Job not found', 404)
 
 	const body = await req.json()
 	const parsed = updateJobSchema.safeParse(body)
-
 	if (!parsed.success) {
 		return errorResponse(parsed.error.issues[0]?.message ?? 'Validation failed', 400)
 	}
@@ -75,9 +67,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 		where: { id },
 		data: {
 			...rest,
+			// Only include date/url fields if they were sent — avoids accidental nulls
 			...(url !== undefined ? { url: url || null } : {}),
 			...(appliedAt !== undefined ? { appliedAt: appliedAt ? new Date(appliedAt) : null } : {}),
-			...(deadlineAt !== undefined ? { deadlineAt: deadlineAt ? new Date(deadlineAt) : null } : {}),
+			...(deadlineAt !== undefined
+				? { deadlineAt: deadlineAt ? new Date(deadlineAt) : null }
+				: {}),
 		},
 	})
 
@@ -85,14 +80,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 /**
- * DELETE /api/jobs/[id] — delete a job
+ * DELETE /api/jobs/[id]
  */
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-	const user = await getAuthenticatedUser()
-	if (!user) return errorResponse('Unauthorized', 401)
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { user, response } = await requireUser()
+	if (response) return response
 
 	const { id } = await params
-	const existing = await getJobOrFail(id, user.id)
+	const existing = await getOwnedJob(id, user.id)
 	if (!existing) return errorResponse('Job not found', 404)
 
 	await prisma.job.delete({ where: { id } })

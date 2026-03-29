@@ -1,5 +1,5 @@
+import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createClient } from '@/lib/supabase/server'
 import { errorResponse, successResponse } from '@/types/api'
 import { z } from 'zod'
 
@@ -16,20 +16,12 @@ const createJobSchema = z.object({
 		.default('WISHLIST'),
 })
 
-async function getAuthenticatedUser() {
-	const supabase = await createClient()
-	const {
-		data: { user },
-	} = await supabase.auth.getUser()
-	return user
-}
-
 /**
  * GET /api/jobs — list all jobs for the authenticated user
  */
 export async function GET() {
-	const user = await getAuthenticatedUser()
-	if (!user) return errorResponse('Unauthorized', 401)
+	const { user, response } = await requireUser()
+	if (response) return response
 
 	const jobs = await prisma.job.findMany({
 		where: { userId: user.id },
@@ -43,8 +35,8 @@ export async function GET() {
  * POST /api/jobs — create a new job
  */
 export async function POST(req: Request) {
-	const user = await getAuthenticatedUser()
-	if (!user) return errorResponse('Unauthorized', 401)
+	const { user, response } = await requireUser()
+	if (response) return response
 
 	const body = await req.json()
 	const parsed = createJobSchema.safeParse(body)
@@ -55,7 +47,7 @@ export async function POST(req: Request) {
 
 	const { url, ...rest } = parsed.data
 
-	// Get the max position for this status column for ordering
+	// Compute next position in this status column so new cards appear at the bottom
 	const maxPosition = await prisma.job.aggregate({
 		where: { userId: user.id, status: parsed.data.status },
 		_max: { position: true },
