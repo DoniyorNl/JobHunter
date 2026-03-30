@@ -15,6 +15,7 @@ import {
 	LayoutDashboard,
 	LogOut,
 	Moon,
+	Settings,
 	Sparkles,
 	Sun,
 	Users,
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
 	{ href: '/contacts', label: 'Contacts', icon: Users, exact: false },
 	{ href: '/interviews', label: 'Interviews', icon: Calendar, exact: false },
 	{ href: '/metrics', label: 'Metrics', icon: BarChart2, exact: false },
+	{ href: '/settings', label: 'Settings', icon: Settings, exact: false },
 ] as const
 
 interface SidebarProps {
