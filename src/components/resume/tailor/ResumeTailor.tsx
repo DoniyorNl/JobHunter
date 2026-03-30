@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
@@ -13,6 +13,7 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Download,
+	FileText,
 	Loader2,
 	Sparkles,
 	Target,
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import type { ResumeData } from '@/types/resume'
+import Link from 'next/link'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -286,8 +288,8 @@ function AnalysisPanel({ result, resumeId }: { result: TailorResult; resumeId: s
 }
 
 /**
- * Lazy component — renders the appropriate template based on the source
- * resume's template setting. We re-fetch only to get the template name.
+ * Lazy component — renders the appropriate template for PDF export.
+ * Uses useEffect (not useState) to load the template dynamically.
  */
 function TailoredResumePreview({ data, resumeId }: { data: ResumeData; resumeId: string }) {
 	const { data: resumeInfo } = useQuery({
@@ -299,25 +301,27 @@ function TailoredResumePreview({ data, resumeId }: { data: ResumeData; resumeId:
 	})
 
 	const template = resumeInfo?.template ?? 'modern'
-
-	// Dynamic import of template components to avoid pulling them into this bundle
 	const [TemplateComp, setTemplateComp] = useState<React.ComponentType<{ data: ResumeData }> | null>(null)
 
-	useState(() => {
-		const load = async () => {
+	useEffect(() => {
+		let cancelled = false
+		async function load() {
+			let comp: React.ComponentType<{ data: ResumeData }>
 			if (template === 'classic') {
 				const { ClassicTemplate } = await import('../builder/ClassicTemplate')
-				setTemplateComp(() => ClassicTemplate)
+				comp = ClassicTemplate
 			} else if (template === 'minimal') {
 				const { MinimalTemplate } = await import('../builder/MinimalTemplate')
-				setTemplateComp(() => MinimalTemplate)
+				comp = MinimalTemplate
 			} else {
 				const { ModernTemplate } = await import('../builder/ModernTemplate')
-				setTemplateComp(() => ModernTemplate)
+				comp = ModernTemplate
 			}
+			if (!cancelled) setTemplateComp(() => comp)
 		}
 		load()
-	})
+		return () => { cancelled = true }
+	}, [template])
 
 	if (!TemplateComp) return null
 	return <TemplateComp data={data} />
@@ -427,13 +431,27 @@ export function ResumeTailor() {
 						<Label>Resume <span className='text-destructive'>*</span></Label>
 						{resumesLoading ? (
 							<Skeleton className='h-10 rounded-lg' />
+						) : !resumes || resumes.length === 0 ? (
+							// Empty state — guide user to create a resume first
+							<div className='flex items-center gap-3 rounded-lg border-2 border-dashed border-muted px-4 py-3'>
+								<FileText className='w-5 h-5 text-muted-foreground shrink-0' />
+								<div className='text-sm'>
+									<p className='text-muted-foreground'>No resumes yet.</p>
+									<Link
+										href='/resumes'
+										className='font-medium text-primary underline-offset-4 hover:underline'
+									>
+										Create your first resume →
+									</Link>
+								</div>
+							</div>
 						) : (
-							<Select onValueChange={v => { setValue('resumeId', v); setResult(null) }}>
-								<SelectTrigger>
+							<Select onValueChange={(v: string | null) => { if (v) { setValue('resumeId', v); setResult(null) } }}>
+								<SelectTrigger className='w-full'>
 									<SelectValue placeholder='Select a resume to tailor…' />
 								</SelectTrigger>
 								<SelectContent>
-									{(resumes ?? []).map(r => (
+									{resumes.map(r => (
 										<SelectItem key={r.id} value={r.id}>
 											{r.title}
 											{r.targetRole ? ` · ${r.targetRole}` : ''}

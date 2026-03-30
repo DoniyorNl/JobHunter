@@ -335,7 +335,7 @@ const formSchema = z.object({
 	type: z.enum(INTERVIEW_TYPES),
 	date: z.string().min(1, 'Date is required'),
 	time: z.string().min(1, 'Time is required'),
-	duration: z.coerce.number().int().min(5).max(480).optional(),
+	duration: z.string().optional(),
 	location: z.string().max(500).optional(),
 	notes: z.string().max(5000).optional(),
 })
@@ -352,11 +352,12 @@ function AddInterviewModal({ open, onOpenChange }: { open: boolean; onOpenChange
 
 	async function onSubmit(data: FormValues) {
 		const scheduledAt = new Date(`${data.date}T${data.time}`).toISOString()
+		const durationNum = data.duration ? parseInt(data.duration, 10) : undefined
 		await createInterview.mutateAsync({
 			jobId: data.jobId,
 			type: data.type,
 			scheduledAt,
-			duration: data.duration,
+			duration: durationNum && !isNaN(durationNum) ? durationNum : undefined,
 			location: data.location,
 			notes: data.notes,
 		})
@@ -378,7 +379,7 @@ function AddInterviewModal({ open, onOpenChange }: { open: boolean; onOpenChange
 						{/* Job */}
 						<div className='space-y-1.5 col-span-2'>
 							<Label>Job <span className='text-destructive'>*</span></Label>
-							<Select onValueChange={(v) => setValue('jobId', v)}>
+							<Select onValueChange={(v: string | null) => { if (v) setValue('jobId', v) }}>
 								<SelectTrigger>
 									<SelectValue placeholder='Select a job...' />
 								</SelectTrigger>
@@ -396,7 +397,7 @@ function AddInterviewModal({ open, onOpenChange }: { open: boolean; onOpenChange
 						{/* Type */}
 						<div className='space-y-1.5 col-span-2'>
 							<Label>Type <span className='text-destructive'>*</span></Label>
-							<Select value={watchedType} onValueChange={(v) => setValue('type', v as InterviewType)}>
+							<Select value={watchedType} onValueChange={(v: string | null) => { if (v) setValue('type', v as InterviewType) }}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
@@ -423,7 +424,7 @@ function AddInterviewModal({ open, onOpenChange }: { open: boolean; onOpenChange
 						{/* Duration */}
 						<div className='space-y-1.5'>
 							<Label>Duration (min)</Label>
-							<Input {...register('duration', { valueAsNumber: true })} type='number' placeholder='60' min={5} max={480} />
+							<Input {...register('duration')} type='number' placeholder='60' min={5} max={480} />
 						</div>
 
 						{/* Location */}

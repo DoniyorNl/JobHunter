@@ -269,10 +269,10 @@ function StatusDonut({ data }: { data: { status: string; count: number }[] }) {
 							background: 'hsl(var(--popover))',
 							color: 'hsl(var(--popover-foreground))',
 						}}
-						formatter={(value: number, name: string) => [
-							value,
-							STATUS_LABELS[name] ?? name,
-						]}
+					formatter={(value, name) => [
+						value,
+						STATUS_LABELS[String(name)] ?? name,
+					]}
 					/>
 				</PieChart>
 			</ResponsiveContainer>
