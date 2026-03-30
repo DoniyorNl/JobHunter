@@ -14,6 +14,7 @@ import {
 	FileText,
 	LayoutDashboard,
 	LogOut,
+	Sparkles,
 	Users,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -21,11 +22,12 @@ import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 const NAV_ITEMS = [
-	{ href: '/board', label: 'Job Board', icon: LayoutDashboard },
-	{ href: '/resumes', label: 'Resumes', icon: FileText },
-	{ href: '/contacts', label: 'Contacts', icon: Users },
-	{ href: '/interviews', label: 'Interviews', icon: Calendar },
-	{ href: '/metrics', label: 'Metrics', icon: BarChart2 },
+	{ href: '/board', label: 'Job Board', icon: LayoutDashboard, exact: false },
+	{ href: '/resumes/tailor', label: 'Resume Tailor', icon: Sparkles, exact: true },
+	{ href: '/resumes', label: 'Resumes', icon: FileText, exact: false },
+	{ href: '/contacts', label: 'Contacts', icon: Users, exact: false },
+	{ href: '/interviews', label: 'Interviews', icon: Calendar, exact: false },
+	{ href: '/metrics', label: 'Metrics', icon: BarChart2, exact: false },
 ] as const
 
 interface SidebarProps {
@@ -80,8 +82,13 @@ function NavContent({
 
 			{/* Navigation */}
 			<nav className='flex-1 px-2 py-3 space-y-0.5 overflow-y-auto'>
-				{NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-					const isActive = pathname.startsWith(href)
+			{NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
+				// exact=true → only highlight on exact match
+				// exact=false → highlight on prefix match, BUT yield to any exact-match sibling
+				const exactSiblingActive = NAV_ITEMS.some(n => n.exact && pathname === n.href)
+				const isActive = exact
+					? pathname === href
+					: pathname.startsWith(href) && !exactSiblingActive
 
 					return (
 						<Link

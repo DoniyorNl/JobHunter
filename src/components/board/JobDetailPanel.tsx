@@ -6,7 +6,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
-import { CalendarDays, DollarSign, ExternalLink, Link2, MapPin, Trash2 } from 'lucide-react'
+import { Bell, CalendarDays, DollarSign, ExternalLink, Link2, MapPin, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,8 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useDeleteJob, useUpdateJob } from '@/hooks/useJobs'
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/boardStore'
 import { JOB_STATUS_LABELS, type Job, type JobStatus } from '@/types/job'
@@ -124,6 +126,22 @@ function PanelContent({ job }: { job: Job }) {
 	const updateJob = useUpdateJob()
 	const deleteJob = useDeleteJob()
 	const setDetailOpen = useBoardStore(s => s.setDetailOpen)
+
+	const sendReminder = useMutation({
+		mutationFn: async () => {
+			const res = await fetch('/api/reminders/send', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ jobId: job.id }),
+			})
+			if (!res.ok) {
+				const b = await res.json().catch(() => ({}))
+				throw new Error(b.error ?? 'Failed to send reminder')
+			}
+		},
+		onSuccess: () => toast.success('Reminder sent to your email'),
+		onError: (e: Error) => toast.error(e.message),
+	})
 
 	const {
 		register,
@@ -361,6 +379,21 @@ function PanelContent({ job }: { job: Job }) {
 				>
 					{updateJob.isPending ? 'Saving...' : isDirty ? 'Save changes' : 'Saved'}
 				</Button>
+
+				{(job.status === 'APPLIED' || job.status === 'PHONE_SCREEN') && (
+					<Button
+						type='button'
+						variant='outline'
+						size='icon'
+						className='shrink-0 text-muted-foreground'
+						onClick={() => sendReminder.mutate()}
+						disabled={sendReminder.isPending}
+						title='Send follow-up reminder to your email'
+					>
+						<Bell className='w-4 h-4' />
+						<span className='sr-only'>Send reminder</span>
+					</Button>
+				)}
 
 				<Button
 					type='button'
