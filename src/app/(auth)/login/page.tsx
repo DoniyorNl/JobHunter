@@ -63,7 +63,7 @@ function LoginForm() {
 					<div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
 						<span className='text-primary-foreground font-bold text-sm'>J</span>
 					</div>
-					<span className='font-semibold text-lg'>JobTracker</span>
+					<span className='font-semibold tracking-tight text-lg'>JobHunter</span>
 				</div>
 				<CardTitle className='text-2xl'>Welcome back</CardTitle>
 				<CardDescription>Sign in to your account to continue</CardDescription>

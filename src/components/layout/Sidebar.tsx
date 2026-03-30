@@ -14,12 +14,16 @@ import {
 	FileText,
 	LayoutDashboard,
 	LogOut,
+	Moon,
 	Sparkles,
+	Sun,
 	Users,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
+import { useEffect, useState } from 'react'
 
 const NAV_ITEMS = [
 	{ href: '/board', label: 'Job Board', icon: LayoutDashboard, exact: false },
@@ -38,6 +42,35 @@ interface SidebarProps {
 	}
 }
 
+// ─── Theme toggle ─────────────────────────────────────────────────────────────
+
+function ThemeToggle() {
+	const { resolvedTheme, setTheme } = useTheme()
+	const isDark = resolvedTheme === 'dark'
+
+	return (
+		<Button
+			variant='ghost'
+			size='sm'
+			className='w-full justify-start gap-3 text-muted-foreground hover:text-foreground'
+			onClick={() => setTheme(isDark ? 'light' : 'dark')}
+			aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+		>
+			{isDark ? (
+				<>
+					<Sun className='w-4 h-4 shrink-0' />
+					Light mode
+				</>
+			) : (
+				<>
+					<Moon className='w-4 h-4 shrink-0' />
+					Dark mode
+				</>
+			)}
+		</Button>
+	)
+}
+
 // ─── Shared nav content ────────────────────────────────────────────────────────
 
 function NavContent({
@@ -49,6 +82,22 @@ function NavContent({
 }) {
 	const pathname = usePathname()
 	const router = useRouter()
+
+	/*
+	 * Why `mounted` state?
+	 *
+	 * Next.js App Router renders 'use client' components on the server for SSR.
+	 * During that server pass, `usePathname()` may return a value that React
+	 * can't guarantee will match the value at client hydration time — causing a
+	 * className mismatch hydration warning.
+	 *
+	 * Solution: render ALL nav links as "inactive" on both the server AND the
+	 * initial client render (before useEffect fires). Only after the component
+	 * has mounted do we apply the real active state. The switch is instantaneous
+	 * and invisible thanks to the existing `transition-colors` class.
+	 */
+	const [mounted, setMounted] = useState(false)
+	useEffect(() => { setMounted(true) }, [])
 
 	const initials = user.name
 		? user.name
@@ -77,46 +126,47 @@ function NavContent({
 				<div className='w-7 h-7 bg-primary rounded-md flex items-center justify-center shrink-0'>
 					<Briefcase className='w-4 h-4 text-primary-foreground' />
 				</div>
-				<span className='font-semibold text-foreground'>JobTracker</span>
+				<span className='font-semibold tracking-tight text-foreground'>JobHunter</span>
 			</div>
 
 			{/* Navigation */}
 			<nav className='flex-1 px-2 py-3 space-y-0.5 overflow-y-auto'>
-			{NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
-				// exact=true → only highlight on exact match
-				// exact=false → highlight on prefix match, BUT yield to any exact-match sibling
-				const exactSiblingActive = NAV_ITEMS.some(n => n.exact && pathname === n.href)
-				const isActive = exact
+		{NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
+				// Only compute active state after mount to avoid SSR/client mismatch
+				const exactSiblingActive = mounted && NAV_ITEMS.some(n => n.exact && pathname === n.href)
+				const isActive = mounted && (exact
 					? pathname === href
-					: pathname.startsWith(href) && !exactSiblingActive
+					: pathname.startsWith(href) && !exactSiblingActive)
 
-					return (
-						<Link
-							key={href}
-							href={href}
-							onClick={onNavigate}
-							className={cn(
-								'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-								isActive
-									? 'bg-primary/10 text-primary'
-									: 'text-muted-foreground hover:text-foreground hover:bg-accent',
-							)}
-						>
-							<Icon className='w-4 h-4 shrink-0' />
-							{label}
-						</Link>
-					)
-				})}
+				return (
+					<Link
+						key={href}
+						href={href}
+						onClick={onNavigate}
+						className={cn(
+							'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+							isActive
+								? 'bg-foreground/[0.08] text-foreground'
+								: 'text-muted-foreground hover:text-foreground hover:bg-accent',
+						)}
+					>
+						<Icon className='w-4 h-4 shrink-0' />
+						{label}
+					</Link>
+				)
+			})}
 			</nav>
 
 			<Separator />
 
-			{/* User info & logout */}
-			<div className='p-3 shrink-0'>
+			{/* Bottom controls — theme toggle + user */}
+			<div className='p-3 shrink-0 space-y-1'>
+				<ThemeToggle />
+
 				<div className='flex items-center gap-3 px-2 py-2 rounded-md'>
 					<Avatar className='w-8 h-8 shrink-0'>
 						<AvatarImage src={user.avatarUrl ?? undefined} />
-						<AvatarFallback className='text-xs'>{initials}</AvatarFallback>
+						<AvatarFallback className='text-xs font-medium'>{initials}</AvatarFallback>
 					</Avatar>
 					<div className='flex-1 min-w-0'>
 						<p className='text-sm font-medium text-foreground truncate'>{user.name ?? 'User'}</p>
@@ -127,7 +177,7 @@ function NavContent({
 				<Button
 					variant='ghost'
 					size='sm'
-					className='w-full justify-start gap-3 mt-1 text-muted-foreground hover:text-foreground'
+					className='w-full justify-start gap-3 text-muted-foreground hover:text-foreground'
 					onClick={handleLogout}
 				>
 					<LogOut className='w-4 h-4' />
@@ -144,8 +194,6 @@ function NavContent({
  * Renders two variants:
  * 1. Desktop (lg+): fixed aside always visible
  * 2. Mobile (<lg): Sheet (drawer) controlled by useUIStore
- *
- * Nav content is extracted to NavContent to avoid duplication.
  */
 export function Sidebar({ user }: SidebarProps) {
 	const sidebarOpen = useUIStore(s => s.sidebarOpen)
@@ -153,16 +201,12 @@ export function Sidebar({ user }: SidebarProps) {
 
 	return (
 		<>
-			{/* Desktop sidebar — hidden on mobile */}
+			{/* Desktop sidebar */}
 			<aside className='hidden lg:flex flex-col w-60 shrink-0 h-full border-r bg-sidebar'>
 				<NavContent user={user} />
 			</aside>
 
-			{/*
-			 * Mobile sidebar — Sheet (drawer from left).
-			 * Only rendered/interactive on small screens.
-			 * Closing on nav click: onNavigate → setSidebarOpen(false)
-			 */}
+			{/* Mobile sidebar — Sheet drawer */}
 			<Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
 				<SheetContent
 					side='left'

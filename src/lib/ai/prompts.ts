@@ -86,6 +86,75 @@ Return ONLY valid JSON (no markdown code blocks):
 }
   `.trim(),
 
+	/**
+	 * Used with Gemini multimodal (PDF inlineData).
+	 * Returns a JSON object matching our ResumeData shape.
+	 */
+	PARSE_RESUME_PDF: () => `
+You are a resume parser. Read the attached resume PDF and extract all information.
+
+Return ONLY valid JSON (no markdown code blocks) matching this exact structure:
+{
+  "personalInfo": {
+    "name": "",
+    "email": "",
+    "phone": "",
+    "location": "",
+    "linkedin": "",
+    "github": "",
+    "website": "",
+    "summary": ""
+  },
+  "experience": [
+    {
+      "id": "exp-1",
+      "company": "",
+      "title": "",
+      "location": "",
+      "startDate": "Jan 2022",
+      "endDate": "Mar 2024",
+      "current": false,
+      "bullets": ["Achieved X by doing Y, resulting in Z"]
+    }
+  ],
+  "education": [
+    {
+      "id": "edu-1",
+      "school": "",
+      "degree": "",
+      "field": "",
+      "startDate": "2018",
+      "endDate": "2022",
+      "gpa": ""
+    }
+  ],
+  "skills": [
+    {
+      "category": "Programming Languages",
+      "items": ["Python", "TypeScript"]
+    }
+  ],
+  "certifications": [
+    {
+      "id": "cert-1",
+      "name": "",
+      "issuer": "",
+      "date": "",
+      "url": ""
+    }
+  ]
+}
+
+Rules:
+- Extract every piece of information visible in the resume
+- For dates, use "MMM YYYY" format (e.g. "Jan 2022") or just "YYYY"
+- If "current" job, set endDate to null and current to true
+- Group skills by category (Languages, Frameworks, Tools, etc.)
+- Keep bullet points as-is from the original, do not rewrite them
+- If a field is missing, use empty string "" for strings or [] for arrays
+- Generate unique IDs: "exp-1", "exp-2", "edu-1", etc.
+`.trim(),
+
 	TAILOR_BULLETS: (originalBullets: string[], jobDescription: string, targetRole: string) =>
 		`
 Rewrite these resume bullets to better match the job description for a ${targetRole} role.

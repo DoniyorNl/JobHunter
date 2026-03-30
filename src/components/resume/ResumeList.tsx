@@ -9,8 +9,10 @@ import { formatDistanceToNow } from 'date-fns'
 import {
 	Copy,
 	FileText,
+	FileUp,
 	MoreHorizontal,
 	Pencil,
+	PenLine,
 	Plus,
 	Star,
 	Trash2,
@@ -160,7 +162,7 @@ function NewResumeCard({ onClick }: { onClick: () => void }) {
 			<div className='w-12 h-12 rounded-full bg-muted flex items-center justify-center'>
 				<Plus className='w-6 h-6' />
 			</div>
-			<p className='text-sm font-medium'>New resume</p>
+			<p className='text-sm font-medium'>Add resume</p>
 		</button>
 	)
 }
@@ -185,23 +187,54 @@ export function ResumeList() {
 
 	return (
 		<>
-			{isEmpty ? (
-				/* Full-page empty state for first-time users */
-				<div className='flex flex-col items-center justify-center py-24 gap-4'>
-					<div className='w-16 h-16 rounded-2xl bg-muted flex items-center justify-center'>
+		{isEmpty ? (
+			/* Full-page empty state — two options side by side */
+			<div className='flex flex-col items-center justify-center py-16 gap-8'>
+				<div className='text-center space-y-1'>
+					<div className='w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4'>
 						<FileText className='w-8 h-8 text-muted-foreground' />
 					</div>
-					<div className='text-center space-y-1'>
-						<h3 className='text-base font-semibold'>No resumes yet</h3>
-						<p className='text-sm text-muted-foreground max-w-xs'>
-							Create your first resume and start tailoring it to job descriptions with AI.
-						</p>
-					</div>
-					<Button onClick={() => setIsCreateOpen(true)} className='gap-2'>
-						<Plus className='w-4 h-4' />
-						Create your first resume
-					</Button>
+					<h3 className='text-base font-semibold'>No resumes yet</h3>
+					<p className='text-sm text-muted-foreground max-w-xs'>
+						Build a new resume from scratch or import your existing PDF — AI will do the heavy lifting.
+					</p>
 				</div>
+
+				{/* Two option cards */}
+				<div className='grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md'>
+					<button
+						onClick={() => setIsCreateOpen(true)}
+						className={cn(
+							'flex flex-col items-center gap-3 rounded-xl border-2 p-6 text-center',
+							'transition-all hover:border-primary/50 hover:bg-primary/5 border-border',
+						)}
+					>
+						<div className='w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center'>
+							<PenLine className='w-6 h-6 text-primary' />
+						</div>
+						<div className='space-y-0.5'>
+							<p className='text-sm font-semibold'>Build from scratch</p>
+							<p className='text-xs text-muted-foreground'>Start with an empty template</p>
+						</div>
+					</button>
+
+					<button
+						onClick={() => setIsCreateOpen(true)}
+						className={cn(
+							'flex flex-col items-center gap-3 rounded-xl border-2 p-6 text-center',
+							'transition-all hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 border-border',
+						)}
+					>
+						<div className='w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center'>
+							<FileUp className='w-6 h-6 text-emerald-600 dark:text-emerald-400' />
+						</div>
+						<div className='space-y-0.5'>
+							<p className='text-sm font-semibold'>Import PDF resume</p>
+							<p className='text-xs text-muted-foreground'>AI extracts your content</p>
+						</div>
+					</button>
+				</div>
+			</div>
 			) : (
 				<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
 					{resumes.map(resume => (
