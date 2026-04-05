@@ -23,12 +23,16 @@ export async function GET() {
 	const { user, response } = await requireUser()
 	if (response) return response
 
-	const jobs = await prisma.job.findMany({
-		where: { userId: user.id },
-		orderBy: [{ status: 'asc' }, { position: 'asc' }, { createdAt: 'desc' }],
-	})
-
-	return Response.json(successResponse(jobs))
+	try {
+		const jobs = await prisma.job.findMany({
+			where: { userId: user.id },
+			orderBy: [{ status: 'asc' }, { position: 'asc' }, { createdAt: 'desc' }],
+		})
+		return Response.json(successResponse(jobs))
+	} catch (err) {
+		console.error('[GET /api/jobs]', err)
+		return errorResponse('Failed to fetch jobs', 500)
+	}
 }
 
 /**

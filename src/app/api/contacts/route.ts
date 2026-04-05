@@ -18,13 +18,17 @@ export async function GET() {
 	const { user, response } = await requireUser()
 	if (response) return response
 
-	const contacts = await prisma.contact.findMany({
-		where: { userId: user.id },
-		include: { job: { select: { id: true, title: true, company: true } } },
-		orderBy: { createdAt: 'desc' },
-	})
-
-	return Response.json(successResponse(contacts))
+	try {
+		const contacts = await prisma.contact.findMany({
+			where: { userId: user.id },
+			include: { job: { select: { id: true, title: true, company: true } } },
+			orderBy: { createdAt: 'desc' },
+		})
+		return Response.json(successResponse(contacts))
+	} catch (err) {
+		console.error('[GET /api/contacts]', err)
+		return errorResponse('Failed to fetch contacts', 500)
+	}
 }
 
 export async function POST(req: Request) {

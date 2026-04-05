@@ -1,6 +1,6 @@
 import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { successResponse } from '@/types/api'
+import { errorResponse, successResponse } from '@/types/api'
 import { subDays, format, eachDayOfInterval, startOfDay } from 'date-fns'
 
 /**
@@ -16,6 +16,7 @@ export async function GET() {
 	const { user, response } = await requireUser()
 	if (response) return response
 
+	try {
 	// Run all queries in parallel for minimal latency
 	const [statusCounts, recentJobs, totalCount] = await Promise.all([
 		// Status breakdown
@@ -116,4 +117,8 @@ export async function GET() {
 			pipeline,
 		}),
 	)
+	} catch (err) {
+		console.error('[GET /api/metrics]', err)
+		return errorResponse('Failed to fetch metrics', 500)
+	}
 }

@@ -21,16 +21,19 @@ export async function GET() {
 	const { user, response } = await requireUser()
 	if (response) return response
 
-	const resumes = await prisma.resume.findMany({
-		where: { userId: user.id },
-		orderBy: [
-			// Default resume first, then by most recently updated
-			{ isDefault: 'desc' },
-			{ updatedAt: 'desc' },
-		],
-	})
-
-	return Response.json(successResponse(resumes as unknown as Resume[]))
+	try {
+		const resumes = await prisma.resume.findMany({
+			where: { userId: user.id },
+			orderBy: [
+				{ isDefault: 'desc' },
+				{ updatedAt: 'desc' },
+			],
+		})
+		return Response.json(successResponse(resumes as unknown as Resume[]))
+	} catch (err) {
+		console.error('[GET /api/resumes]', err)
+		return errorResponse('Failed to fetch resumes', 500)
+	}
 }
 
 /**
