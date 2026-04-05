@@ -27,21 +27,26 @@ export type AuthResult = AuthSuccess | AuthFailure
  * - Non-fatal: a failure here is logged but does not block the request.
  */
 export async function requireUser(): Promise<AuthResult> {
-	const supabase = await createClient()
-	const {
-		data: { user },
-		error,
-	} = await supabase.auth.getUser()
-
-	if (error || !user) {
-		return { user: null, response: errorResponse('Unauthorized', 401) }
-	}
-
 	try {
-		await ensureUserExists(user)
-	} catch (err) {
-		console.error('[requireUser] ensureUserExists failed:', err)
-	}
+		const supabase = await createClient()
+		const {
+			data: { user },
+			error,
+		} = await supabase.auth.getUser()
 
-	return { user, response: null }
+		if (error || !user) {
+			return { user: null, response: errorResponse('Unauthorized', 401) }
+		}
+
+		try {
+			await ensureUserExists(user)
+		} catch (err) {
+			console.error('[requireUser] ensureUserExists failed:', err)
+		}
+
+		return { user, response: null }
+	} catch (err) {
+		console.error('[requireUser] Supabase client error:', err)
+		return { user: null, response: errorResponse('Authentication service unavailable', 503) }
+	}
 }

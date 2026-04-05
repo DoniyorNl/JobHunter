@@ -2,18 +2,38 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-	const supabase = await createClient()
+	const checks: Record<string, string> = {}
 
-	const { error } = await supabase.from('_health').select('1').limit(1).maybeSingle()
+	// Check env vars
+	checks.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ? 'ok' : 'MISSING'
+	checks.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'ok' : 'MISSING'
+	checks.DATABASE_URL = process.env.DATABASE_URL ? 'ok' : 'MISSING'
 
-	if (error && error.code !== 'PGRST116') {
-		// PGRST116 = table not found — that's fine for a ping
-		// Other errors indicate real connectivity issues
-		return NextResponse.json({ status: 'error', message: error.message }, { status: 503 })
+	const missingVars = Object.entries(checks).filter(([, v]) => v === 'MISSING')
+	if (missingVars.length > 0) {
+		return NextResponse.json({
+			status: 'error',
+			checks,
+			message: `Missing env vars: ${missingVars.map(([k]) => k).join(', ')}`,
+		}, { status: 503 })
 	}
 
+	try {
+		const supabase = await createClient()
+		const { error } = await supabase.from('_health').select('1').limit(1).maybeSingle()
+		if (error && error.code !== 'PGRST116') {
+			checks.supabase = `error: ${error.message}`
+		} else {
+			checks.supabase = 'ok'
+		}
+	} catch (err) {
+		checks.supabase = `exception: ${String(err)}`
+	}
+
+	const hasErrors = Object.values(checks).some(v => v !== 'ok')
 	return NextResponse.json({
-		status: 'ok',
+		status: hasErrors ? 'degraded' : 'ok',
+		checks,
 		timestamp: new Date().toISOString(),
-	})
+	}, { status: hasErrors ? 503 : 200 })
 }
