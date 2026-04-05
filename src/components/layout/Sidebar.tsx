@@ -48,6 +48,31 @@ interface SidebarProps {
 
 function ThemeToggle() {
 	const { resolvedTheme, setTheme } = useTheme()
+	const [mounted, setMounted] = useState(false)
+	useEffect(() => {
+		setMounted(true)
+	}, [])
+
+	/*
+	 * Until mount, `resolvedTheme` can disagree with the blocking theme script
+	 * (script already set `dark` on <html>). That produced Sun vs Moon hydration
+	 * mismatches. Render a stable placeholder until client state syncs.
+	 */
+	if (!mounted) {
+		return (
+			<Button
+				variant='ghost'
+				size='sm'
+				className='w-full justify-start gap-3 text-muted-foreground pointer-events-none'
+				disabled
+				aria-hidden
+			>
+				<Moon className='w-4 h-4 shrink-0 opacity-40' />
+				<span className='text-sm'>Theme</span>
+			</Button>
+		)
+	}
+
 	const isDark = resolvedTheme === 'dark'
 
 	return (

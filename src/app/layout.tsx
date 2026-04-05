@@ -55,15 +55,19 @@ export default function RootLayout({
 			className={`${geistSans.variable} ${geistMono.variable} h-full`}
 			suppressHydrationWarning
 		>
-			<body className='min-h-full flex flex-col'>
+			<head>
 				{/*
-				 * Theme flash prevention — NOT via a <script> inside a client
-				 * component (React 19 disallows that). next/script beforeInteractive
-				 * injects into the document early, outside the client tree.
+				 * Must live in <head> — some runtimes error if beforeInteractive
+				 * Script is only under <body>. Use dangerouslySetInnerHTML (not
+				 * text children) for reliable inline injection.
 				 */}
-				<Script id='theme-init' strategy='beforeInteractive'>
-					{THEME_INIT_SCRIPT}
-				</Script>
+				<Script
+					id='theme-init'
+					strategy='beforeInteractive'
+					dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT.trim() }}
+				/>
+			</head>
+			<body className='min-h-full flex flex-col'>
 				<ThemeProvider>{children}</ThemeProvider>
 			</body>
 		</html>
