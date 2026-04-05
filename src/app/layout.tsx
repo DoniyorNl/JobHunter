@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import Script from 'next/script'
 import { ThemeProvider } from '@/components/shared/ThemeProvider'
+import { THEME_INIT_SCRIPT } from '@/lib/theme-config'
 import './globals.css'
 
 /*
@@ -45,9 +47,8 @@ export default function RootLayout({
 }>) {
 	return (
 		/*
-		 * suppressHydrationWarning is required by next-themes.
-		 * next-themes sets the class/attribute on <html> before React
-		 * hydrates, which would otherwise cause a mismatch warning.
+		 * suppressHydrationWarning: `beforeInteractive` script sets `dark` on
+		 * <html> before hydration; without this React would warn on class mismatch.
 		 */
 		<html
 			lang='en'
@@ -55,6 +56,14 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className='min-h-full flex flex-col'>
+				{/*
+				 * Theme flash prevention — NOT via a <script> inside a client
+				 * component (React 19 disallows that). next/script beforeInteractive
+				 * injects into the document early, outside the client tree.
+				 */}
+				<Script id='theme-init' strategy='beforeInteractive'>
+					{THEME_INIT_SCRIPT}
+				</Script>
 				<ThemeProvider>{children}</ThemeProvider>
 			</body>
 		</html>

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@/components/shared/theme'
 import { toast } from 'sonner'
 import { useEffect, useState } from 'react'
 
