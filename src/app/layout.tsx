@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/shared/ThemeProvider'
-import { THEME_INIT_SCRIPT } from '@/lib/theme-config'
+import { ThemeInitScript } from '@/components/shared/ThemeInitScript'
 import './globals.css'
 
 /*
@@ -46,8 +46,8 @@ export default function RootLayout({
 }>) {
 	return (
 		/*
-		 * suppressHydrationWarning: `beforeInteractive` script sets `dark` on
-		 * <html> before hydration; without this React would warn on class mismatch.
+		 * suppressHydrationWarning: ThemeInitScript may set `dark` on <html> before
+		 * React hydrates — class list can differ from the server HTML string.
 		 */
 		<html
 			lang='en'
@@ -55,14 +55,7 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className='min-h-full flex flex-col'>
-				{/*
-				 * Theme flash: inline script in the ROOT LAYOUT SERVER COMPONENT only.
-				 * Do NOT use next/script beforeInteractive inside a manual <head> — Next
-				 * merges metadata into <head> automatically; a custom <head> can break
-				 * production (500 / malformed document on Vercel).
-				 * Do NOT put this inside a "use client" tree — React 19 warns there.
-				 */}
-				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT.trim() }} />
+				<ThemeInitScript />
 				<ThemeProvider>{children}</ThemeProvider>
 			</body>
 		</html>
