@@ -1,4 +1,3 @@
-import 'dotenv/config'
 import { defineConfig } from 'prisma/config'
 
 /** CLI (migrate, introspect) — Supabase: prefer DIRECT_URL when set */
