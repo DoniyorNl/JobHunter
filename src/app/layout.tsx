@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import Script from 'next/script'
 import { ThemeProvider } from '@/components/shared/ThemeProvider'
 import { THEME_INIT_SCRIPT } from '@/lib/theme-config'
 import './globals.css'
@@ -55,19 +54,15 @@ export default function RootLayout({
 			className={`${geistSans.variable} ${geistMono.variable} h-full`}
 			suppressHydrationWarning
 		>
-			<head>
-				{/*
-				 * Must live in <head> — some runtimes error if beforeInteractive
-				 * Script is only under <body>. Use dangerouslySetInnerHTML (not
-				 * text children) for reliable inline injection.
-				 */}
-				<Script
-					id='theme-init'
-					strategy='beforeInteractive'
-					dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT.trim() }}
-				/>
-			</head>
 			<body className='min-h-full flex flex-col'>
+				{/*
+				 * Theme flash: inline script in the ROOT LAYOUT SERVER COMPONENT only.
+				 * Do NOT use next/script beforeInteractive inside a manual <head> — Next
+				 * merges metadata into <head> automatically; a custom <head> can break
+				 * production (500 / malformed document on Vercel).
+				 * Do NOT put this inside a "use client" tree — React 19 warns there.
+				 */}
+				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT.trim() }} />
 				<ThemeProvider>{children}</ThemeProvider>
 			</body>
 		</html>
