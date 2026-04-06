@@ -20,7 +20,9 @@ export async function GET() {
 
 	try {
 		const supabase = await createClient()
-		const { error } = await supabase.from('_health').select('1').limit(1).maybeSingle()
+		// Ping any known table — "User" always exists in our schema
+		const { error } = await supabase.from('User').select('id').limit(1)
+		// PGRST116 = no rows (fine), anything else is a real problem
 		if (error && error.code !== 'PGRST116') {
 			checks.supabase = `error: ${error.message}`
 		} else {
