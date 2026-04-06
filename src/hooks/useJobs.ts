@@ -1,3 +1,4 @@
+import { parseJsonSafe } from '@/lib/fetch-json'
 import { useBoardStore } from '@/stores/boardStore'
 import type { CreateJobInput, Job, UpdateJobInput } from '@/types/job'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -11,9 +12,14 @@ const JOB_KEYS = {
 
 async function fetchJobs(): Promise<Job[]> {
 	const res = await fetch('/api/jobs')
-	if (!res.ok) throw new Error('Failed to fetch jobs')
-	const { data } = await res.json()
-	return data
+	const body = await parseJsonSafe<{ data?: Job[]; error?: string }>(res)
+	if (!res.ok) {
+		throw new Error(body?.error ?? `Failed to fetch jobs (${res.status})`)
+	}
+	if (!body || !('data' in body)) {
+		throw new Error('Invalid response from server')
+	}
+	return body.data ?? []
 }
 
 async function createJob(input: CreateJobInput): Promise<Job> {
@@ -23,11 +29,12 @@ async function createJob(input: CreateJobInput): Promise<Job> {
 		body: JSON.stringify(input),
 	})
 	if (!res.ok) {
-		const body = await res.json()
-		throw new Error(body.error ?? 'Failed to create job')
+		const body = await parseJsonSafe<{ error?: string }>(res)
+		throw new Error(body?.error ?? `Failed to create job (${res.status})`)
 	}
-	const { data } = await res.json()
-	return data
+	const body = await parseJsonSafe<{ data: Job }>(res)
+	if (!body?.data) throw new Error('Invalid response from server')
+	return body.data
 }
 
 async function updateJob(id: string, input: UpdateJobInput): Promise<Job> {
@@ -37,18 +44,19 @@ async function updateJob(id: string, input: UpdateJobInput): Promise<Job> {
 		body: JSON.stringify(input),
 	})
 	if (!res.ok) {
-		const body = await res.json()
-		throw new Error(body.error ?? 'Failed to update job')
+		const body = await parseJsonSafe<{ error?: string }>(res)
+		throw new Error(body?.error ?? `Failed to update job (${res.status})`)
 	}
-	const { data } = await res.json()
-	return data
+	const body = await parseJsonSafe<{ data: Job }>(res)
+	if (!body?.data) throw new Error('Invalid response from server')
+	return body.data
 }
 
 async function deleteJob(id: string): Promise<void> {
 	const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE' })
 	if (!res.ok) {
-		const body = await res.json()
-		throw new Error(body.error ?? 'Failed to delete job')
+		const body = await parseJsonSafe<{ error?: string }>(res)
+		throw new Error(body?.error ?? `Failed to delete job (${res.status})`)
 	}
 }
 

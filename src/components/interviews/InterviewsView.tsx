@@ -17,6 +17,7 @@ import {
 	Trash2,
 } from 'lucide-react'
 
+import { parseJsonSafe } from '@/lib/fetch-json'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -79,16 +80,16 @@ interface Interview {
 
 async function fetchInterviews(): Promise<Interview[]> {
 	const res = await fetch('/api/interviews')
-	if (!res.ok) throw new Error('Failed to fetch interviews')
-	const { data } = await res.json()
-	return data
+	const body = await parseJsonSafe<{ data?: Interview[]; error?: string }>(res)
+	if (!res.ok) throw new Error(body?.error ?? `Failed to fetch interviews (${res.status})`)
+	return body?.data ?? []
 }
 
 async function fetchJobs(): Promise<{ id: string; title: string; company: string }[]> {
 	const res = await fetch('/api/jobs')
+	const body = await parseJsonSafe<{ data?: { id: string; title: string; company: string }[] }>(res)
 	if (!res.ok) return []
-	const { data } = await res.json()
-	return data ?? []
+	return body?.data ?? []
 }
 
 async function createInterview(input: object): Promise<Interview> {
@@ -97,9 +98,13 @@ async function createInterview(input: object): Promise<Interview> {
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(input),
 	})
-	if (!res.ok) { const b = await res.json(); throw new Error(b.error ?? 'Failed') }
-	const { data } = await res.json()
-	return data
+	if (!res.ok) {
+		const b = await parseJsonSafe<{ error?: string }>(res)
+		throw new Error(b?.error ?? `Failed (${res.status})`)
+	}
+	const parsed = await parseJsonSafe<{ data: Interview }>(res)
+	if (!parsed?.data) throw new Error('Invalid response from server')
+	return parsed.data
 }
 
 async function deleteInterview(id: string): Promise<void> {
