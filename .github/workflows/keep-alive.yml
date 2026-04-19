@@ -1,0 +1,15 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    - cron: "0 9 */5 * *"  # Har 5 kunda bir marta
+  workflow_dispatch:        # Qo'lda ham ishlatish mumkin
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping JobHunter health endpoint
+        run: |
+          curl --fail https://job-hunter-pied-five.vercel.app/api/health
+          echo "Ping successful"
