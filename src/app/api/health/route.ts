@@ -1,31 +1,13 @@
-import { prisma } from "@/lib/prisma"
-import { NextResponse } from "next/server"
+import { prisma } from '@/lib/prisma'
+import { NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-	const checks: Record<string, string> = {}
-
-	checks.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ? "ok" : "MISSING"
-	checks.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "ok" : "MISSING"
-	checks.DATABASE_URL = process.env.DATABASE_URL ? "ok" : "MISSING"
-
-	const missingVars = Object.entries(checks).filter(([, v]) => v === "MISSING")
-	if (missingVars.length > 0) {
-		return NextResponse.json(
-			{ status: "error", checks, message: `Missing env vars: ${missingVars.map(([k]) => k).join(", ")}` },
-			{ status: 503 }
-		)
-	}
-
 	try {
 		await prisma.$queryRaw`SELECT 1`
-		checks.database = "ok"
-	} catch (err) {
-		checks.database = `error: ${String(err)}`
+		return NextResponse.json({ status: 'ok', timestamp: new Date().toISOString() })
+	} catch (error) {
+		return NextResponse.json({ status: 'error' }, { status: 500 })
 	}
-
-	const hasErrors = Object.values(checks).some((v) => v !== "ok")
-	return NextResponse.json(
-		{ status: hasErrors ? "degraded" : "ok", checks, timestamp: new Date().toISOString() },
-		{ status: hasErrors ? 503 : 200 }
-	)
 }
